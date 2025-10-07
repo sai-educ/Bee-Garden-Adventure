@@ -14,8 +14,11 @@
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       overflow: hidden;
-      cursor: none;
       background: linear-gradient(180deg, #87CEEB 0%, #98D8C8 100%);
+    }
+
+    body.game-active {
+      cursor: none;
     }
 
     #gameCanvas {
@@ -23,7 +26,6 @@
       background-image: url('https://images.unsplash.com/photo-1550948390-6eb7fa773072?w=1600');
       background-size: cover;
       background-position: center;
-      cursor: none;
     }
 
     .ui-overlay {
@@ -71,6 +73,37 @@
       z-index: 1000;
       filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
       transition: transform 0.1s ease;
+      animation: flapWings 0.3s ease-in-out infinite alternate;
+    }
+
+    @keyframes flapWings {
+      0% {
+        transform: translate(-50%, -50%) rotate(-5deg) scaleY(1);
+      }
+      100% {
+        transform: translate(-50%, -50%) rotate(5deg) scaleY(0.95);
+      }
+    }
+
+    .bee-trail {
+      position: absolute;
+      pointer-events: none;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      z-index: 999;
+      animation: fadeTrail 0.6s ease-out forwards;
+    }
+
+    @keyframes fadeTrail {
+      0% {
+        opacity: 0.8;
+        transform: scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(0.3);
+      }
     }
 
     /* Quiz Modal */
@@ -434,7 +467,7 @@
       </div>
       <div class="score-item">
         <span class="score-label">Lives</span>
-        <span class="score-value" id="livesDisplay">❤️❤️❤️</span>
+        <span class="score-value" id="livesDisplay">🐝🐝🐝</span>
       </div>
     </div>
   </div>
@@ -483,6 +516,11 @@
     let mouseY = canvas.height / 2;
     let items = [];
     let groundItems = [];
+    let spawnInterval = null;
+    let lastTrailTime = 0;
+
+    // Trail colors
+    const trailColors = ['#FFD700', '#FF69B4', '#00CED1', '#FF6347', '#98FB98'];
 
     // Bee quiz questions
     const quizQuestions = [
@@ -520,13 +558,13 @@
 
     let currentQuiz = null;
 
-    // Item types
+    // Item types - sizes increased by 50%
     const itemTypes = [
-      { emoji: '🌼', type: 'good', color: '#FFD700', size: 30 },
-      { emoji: '🌸', type: 'good', color: '#FF69B4', size: 30 },
-      { emoji: '🌻', type: 'good', color: '#FFA500', size: 35 },
-      { emoji: '🍂', type: 'bad', color: '#8B4513', size: 25 },
-      { emoji: '🥀', type: 'bad', color: '#DC143C', size: 25 },
+      { emoji: '🌼', type: 'good', color: '#FFD700', size: 45 },
+      { emoji: '🌸', type: 'good', color: '#FF69B4', size: 45 },
+      { emoji: '🌻', type: 'good', color: '#FFA500', size: 52 },
+      { emoji: '🍂', type: 'bad', color: '#8B4513', size: 37 },
+      { emoji: '🥀', type: 'bad', color: '#DC143C', size: 37 },
     ];
 
     class FallingItem {
@@ -544,6 +582,8 @@
       }
 
       update() {
+        if (!gameActive) return true; // Keep items but don't update during quiz
+        
         this.y += this.speed;
         this.rotation += this.rotationSpeed;
         
@@ -560,7 +600,7 @@
           Math.pow(this.y - mouseY, 2)
         );
         
-        if (dist < 40 && !this.collected) {
+        if (dist < 50 && !this.collected) {
           this.collected = true;
           this.handleCollection();
           return false;
@@ -609,6 +649,7 @@
 
     function startGame() {
       document.getElementById('startScreen').classList.add('hidden');
+      document.body.classList.add('game-active');
       gameActive = true;
       score = 0;
       lives = 3;
@@ -618,7 +659,7 @@
       updateScore();
       updateLives();
       gameLoop();
-      spawnItems();
+      startSpawning();
     }
 
     function restartGame() {
@@ -626,16 +667,24 @@
       startGame();
     }
 
-    function spawnItems() {
-      if (!gameActive) return;
-      
-      items.push(new FallingItem());
-      
-      setTimeout(spawnItems, Math.random() * 1000 + 800);
+    function startSpawning() {
+      stopSpawning();
+      spawnInterval = setInterval(() => {
+        items.push(new FallingItem());
+      }, Math.random() * 400 + 800);
+    }
+
+    function stopSpawning() {
+      if (spawnInterval) {
+        clearInterval(spawnInterval);
+        spawnInterval = null;
+      }
     }
 
     function gameLoop() {
-      if (!gameActive) return;
+      if (!gameActive && !document.getElementById('quizModal').classList.contains('active')) {
+        return;
+      }
       
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
@@ -652,7 +701,7 @@
       groundItems.forEach((item, index) => {
         ctx.save();
         ctx.globalAlpha = 0.7;
-        ctx.font = '25px Arial';
+        ctx.font = '30px Arial';
         ctx.textAlign = 'center';
         ctx.fillText(item.emoji, item.x, canvas.height - 40 - (index * 8));
         ctx.restore();
@@ -717,17 +766,18 @@
     function closeQuiz() {
       document.getElementById('quizModal').classList.remove('active');
       gameActive = true;
-      gameLoop();
     }
 
     function winGame() {
       gameActive = false;
+      stopSpawning();
       document.getElementById('winScreen').classList.add('active');
       playWinSound();
     }
 
     function gameOver() {
       gameActive = false;
+      stopSpawning();
       alert(`Game Over! Your final score: ${score}\n\nTry again to reach 50 points!`);
       restartGame();
     }
@@ -737,8 +787,26 @@
     }
 
     function updateLives() {
-      const hearts = '❤️'.repeat(lives);
-      document.getElementById('livesDisplay').textContent = hearts || '💔';
+      const bees = '🐝'.repeat(lives);
+      document.getElementById('livesDisplay').textContent = bees || '💔';
+    }
+
+    // Create trail effect
+    function createTrail(x, y) {
+      const now = Date.now();
+      if (now - lastTrailTime < 30) return; // Throttle trail creation
+      lastTrailTime = now;
+      
+      const trail = document.createElement('div');
+      trail.className = 'bee-trail';
+      trail.style.left = x + 'px';
+      trail.style.top = y + 'px';
+      trail.style.backgroundColor = trailColors[Math.floor(Math.random() * trailColors.length)];
+      document.body.appendChild(trail);
+      
+      setTimeout(() => {
+        document.body.removeChild(trail);
+      }, 600);
     }
 
     // Mouse tracking
@@ -747,6 +815,10 @@
       mouseY = e.clientY;
       beeCursor.style.left = mouseX + 'px';
       beeCursor.style.top = mouseY + 'px';
+      
+      if (gameActive) {
+        createTrail(mouseX, mouseY);
+      }
     });
 
     // Sound effects
