@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bee Garden Adventure - Learn About Bees!</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+      cursor: none;
+      background: linear-gradient(180deg, #87CEEB 0%, #98D8C8 100%);
+    }
+
+    #gameCanvas {
+      display: block;
+      background-image: url('https://images.unsplash.com/photo-1464207687429-7505649dae38?w=1600');
+      background-size: cover;
+      background-position: center;
+      cursor: none;
+    }
+
+    .ui-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      pointer-events: none;
+    }
+
+    .score-panel {
+      display: flex;
+      justify-content: space-between;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      border-radius: 0 0 20px 20px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .score-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .score-label {
+      font-size: 0.9rem;
+      color: #666;
+      font-weight: 600;
+    }
+
+    .score-value {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #FF6B35;
+    }
+
+    .bee-cursor {
+      position: absolute;
+      pointer-events: none;
+      font-size: 40px;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+      filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+      transition: transform 0.1s ease;
+    }
+
+    /* Quiz Modal */
+    .quiz-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      animation: fadeIn 0.3s ease;
+      pointer-events: all;
+    }
+
+    .quiz-modal.active {
+      display: flex;
+    }
+
+    .quiz-content {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 600px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: slideUp 0.4s ease;
+    }
+
+    .quiz-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .quiz-icon {
+      font-size: 4rem;
+      margin-bottom: 10px;
+    }
+
+    .quiz-title {
+      font-size: 1.8rem;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .quiz-question {
+      font-size: 1.3rem;
+      color: #444;
+      margin-bottom: 30px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .quiz-option {
+      padding: 20px;
+      background: linear-gradient(135deg, #FDB750 0%, #FF9A56 100%);
+      border: none;
+      border-radius: 15px;
+      font-size: 1.1rem;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .quiz-option:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    .quiz-option.correct {
+      background: linear-gradient(135deg, #4ade80, #22c55e);
+    }
+
+    .quiz-option.incorrect {
+      background: linear-gradient(135deg, #f87171, #ef4444);
+    }
+
+    .quiz-feedback {
+      margin-top: 20px;
+      padding: 20px;
+      border-radius: 15px;
+      font-size: 1.1rem;
+      text-align: center;
+      display: none;
+    }
+
+    .quiz-feedback.show {
+      display: block;
+      animation: bounceIn 0.5s ease;
+    }
+
+    .quiz-feedback.correct {
+      background: linear-gradient(135deg, #4ade80, #22c55e);
+      color: white;
+    }
+
+    .quiz-feedback.incorrect {
+      background: linear-gradient(135deg, #f87171, #ef4444);
+      color: white;
+    }
+
+    .quiz-continue {
+      margin-top: 20px;
+      padding: 15px 30px;
+      background: #667eea;
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: none;
+    }
+
+    .quiz-continue:hover {
+      background: #5568d3;
+    }
+
+    /* Start Screen */
+    .start-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 3000;
+      pointer-events: all;
+    }
+
+    .start-screen.hidden {
+      display: none;
+    }
+
+    .start-content {
+      text-align: center;
+      color: white;
+      padding: 40px;
+      max-width: 700px;
+    }
+
+    .start-title {
+      font-size: 4rem;
+      margin-bottom: 20px;
+      text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .start-subtitle {
+      font-size: 1.5rem;
+      margin-bottom: 30px;
+      opacity: 0.9;
+    }
+
+    .start-instructions {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 30px;
+      margin-bottom: 30px;
+      text-align: left;
+    }
+
+    .instruction-item {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 15px;
+      font-size: 1.1rem;
+    }
+
+    .instruction-emoji {
+      font-size: 2rem;
+    }
+
+    .start-btn {
+      padding: 20px 40px;
+      font-size: 1.4rem;
+      background: linear-gradient(45deg, #ff6b6b, #ffd93d);
+      border: none;
+      border-radius: 50px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .start-btn:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Win Screen */
+    .win-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 3000;
+      pointer-events: all;
+    }
+
+    .win-screen.active {
+      display: flex;
+      animation: fadeIn 0.5s ease;
+    }
+
+    .win-content {
+      text-align: center;
+      color: white;
+      padding: 40px;
+    }
+
+    .win-emoji {
+      font-size: 8rem;
+      margin-bottom: 20px;
+      animation: bounceIn 1s ease;
+    }
+
+    .win-title {
+      font-size: 4rem;
+      margin-bottom: 20px;
+      background: linear-gradient(45deg, #ffd93d, #ff6b6b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .win-message {
+      font-size: 1.5rem;
+      margin-bottom: 30px;
+      opacity: 0.9;
+    }
+
+    .restart-btn {
+      padding: 20px 40px;
+      font-size: 1.3rem;
+      background: linear-gradient(45deg, #667eea, #764ba2);
+      border: none;
+      border-radius: 50px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .restart-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes bounceIn {
+      0%, 20%, 40%, 60%, 80% {
+        transform: scale(0.9);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .score-value {
+        font-size: 1.5rem;
+      }
+      
+      .start-title {
+        font-size: 2.5rem;
+      }
+      
+      .quiz-content {
+        padding: 25px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Start Screen -->
+  <div class="start-screen" id="startScreen">
+    <div class="start-content">
+      <div class="start-title">🐝 Bee Garden Adventure</div>
+      <div class="start-subtitle">Learn about bees while having fun!</div>
+      
+      <div class="start-instructions">
+        <div class="instruction-item">
+          <span class="instruction-emoji">🌸</span>
+          <span>Move your mouse to control the bee</span>
+        </div>
+        <div class="instruction-item">
+          <span class="instruction-emoji">🌼</span>
+          <span>Collect good flowers (yellow, pink) for nectar</span>
+        </div>
+        <div class="instruction-item">
+          <span class="instruction-emoji">🍂</span>
+          <span>Avoid bad items (brown leaves, red flowers)</span>
+        </div>
+        <div class="instruction-item">
+          <span class="instruction-emoji">📚</span>
+          <span>Answer bee facts questions every 10 points</span>
+        </div>
+        <div class="instruction-item">
+          <span class="instruction-emoji">🏆</span>
+          <span>Reach 50 points to win!</span>
+        </div>
+      </div>
+      
+      <button class="start-btn" onclick="startGame()">Start Adventure!</button>
+    </div>
+  </div>
+
+  <!-- Game Canvas -->
+  <canvas id="gameCanvas"></canvas>
+  
+  <!-- Bee Cursor -->
+  <div class="bee-cursor" id="beeCursor">🐝</div>
+  
+  <!-- UI Overlay -->
+  <div class="ui-overlay">
+    <div class="score-panel">
+      <div class="score-item">
+        <span class="score-label">Score</span>
+        <span class="score-value" id="scoreDisplay">0</span>
+      </div>
+      <div class="score-item">
+        <span class="score-label">Goal</span>
+        <span class="score-value">50</span>
+      </div>
+      <div class="score-item">
+        <span class="score-label">Lives</span>
+        <span class="score-value" id="livesDisplay">❤️❤️❤️</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quiz Modal -->
+  <div class="quiz-modal" id="quizModal">
+    <div class="quiz-content">
+      <div class="quiz-header">
+        <div class="quiz-icon">🐝</div>
+        <div class="quiz-title">Bee Fact Time!</div>
+      </div>
+      <div class="quiz-question" id="quizQuestion"></div>
+      <div class="quiz-options" id="quizOptions"></div>
+      <div class="quiz-feedback" id="quizFeedback"></div>
+      <button class="quiz-continue" id="quizContinue" onclick="closeQuiz()">Continue Playing! →</button>
+    </div>
+  </div>
+
+  <!-- Win Screen -->
+  <div class="win-screen" id="winScreen">
+    <div class="win-content">
+      <div class="win-emoji">🎉🐝🏆</div>
+      <div class="win-title">You're a Bee Expert!</div>
+      <div class="win-message">
+        Congratulations! You've learned so much about bees and their important role in our ecosystem!
+      </div>
+      <button class="restart-btn" onclick="restartGame()">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const beeCursor = document.getElementById('beeCursor');
+
+    // Set canvas size
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Game state
+    let gameActive = false;
+    let score = 0;
+    let lives = 3;
+    let lastQuizScore = 0;
+    let mouseX = canvas.width / 2;
+    let mouseY = canvas.height / 2;
+    let items = [];
+    let groundItems = [];
+
+    // Bee quiz questions
+    const quizQuestions = [
+      {
+        question: "Bees communicate with each other through dancing. True or False?",
+        options: ["True", "False"],
+        correct: 0,
+        explanation: "True! Honeybees perform a 'waggle dance' to tell other bees where to find flowers!"
+      },
+      {
+        question: "How many flowers might a bee visit in one day?",
+        options: ["50-100 flowers", "500-1000 flowers", "5000-10000 flowers"],
+        correct: 1,
+        explanation: "A single bee can visit 500-1000 flowers in one day! That's amazing!"
+      },
+      {
+        question: "Bees can see colors that humans cannot see. True or False?",
+        options: ["True", "False"],
+        correct: 0,
+        explanation: "True! Bees can see ultraviolet light, which helps them find nectar in flowers!"
+      },
+      {
+        question: "What do bees use to make honey?",
+        options: ["Water", "Flower nectar", "Tree sap"],
+        correct: 1,
+        explanation: "Bees collect flower nectar and transform it into honey in their hives!"
+      },
+      {
+        question: "How many eyes does a bee have?",
+        options: ["2 eyes", "4 eyes", "5 eyes"],
+        correct: 2,
+        explanation: "Bees have 5 eyes! Two large compound eyes and three simple eyes on top of their head!"
+      }
+    ];
+
+    let currentQuiz = null;
+
+    // Item types
+    const itemTypes = [
+      { emoji: '🌼', type: 'good', color: '#FFD700', size: 30 },
+      { emoji: '🌸', type: 'good', color: '#FF69B4', size: 30 },
+      { emoji: '🌻', type: 'good', color: '#FFA500', size: 35 },
+      { emoji: '🍂', type: 'bad', color: '#8B4513', size: 25 },
+      { emoji: '🥀', type: 'bad', color: '#DC143C', size: 25 },
+    ];
+
+    class FallingItem {
+      constructor() {
+        const type = itemTypes[Math.floor(Math.random() * itemTypes.length)];
+        this.emoji = type.emoji;
+        this.type = type.type;
+        this.size = type.size;
+        this.x = Math.random() * (canvas.width - 50) + 25;
+        this.y = -50;
+        this.speed = Math.random() * 2 + 1.5;
+        this.rotation = Math.random() * 360;
+        this.rotationSpeed = (Math.random() - 0.5) * 5;
+        this.collected = false;
+      }
+
+      update() {
+        this.y += this.speed;
+        this.rotation += this.rotationSpeed;
+        
+        // Check if reached ground
+        if (this.y >= canvas.height - 60 && !this.collected) {
+          this.y = canvas.height - 60 - (groundItems.length * 15);
+          groundItems.push(this);
+          return false;
+        }
+        
+        // Check collision with bee
+        const dist = Math.sqrt(
+          Math.pow(this.x - mouseX, 2) + 
+          Math.pow(this.y - mouseY, 2)
+        );
+        
+        if (dist < 40 && !this.collected) {
+          this.collected = true;
+          this.handleCollection();
+          return false;
+        }
+        
+        return this.y < canvas.height;
+      }
+
+      handleCollection() {
+        if (this.type === 'good') {
+          score++;
+          updateScore();
+          playCollectSound();
+          
+          // Check for quiz trigger
+          if (score % 10 === 0 && score !== lastQuizScore && score < 50) {
+            showQuiz();
+          }
+          
+          // Check for win
+          if (score >= 50) {
+            winGame();
+          }
+        } else {
+          lives--;
+          updateLives();
+          playBadSound();
+          
+          if (lives <= 0) {
+            gameOver();
+          }
+        }
+      }
+
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation * Math.PI / 180);
+        ctx.font = `${this.size}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.emoji, 0, 0);
+        ctx.restore();
+      }
+    }
+
+    function startGame() {
+      document.getElementById('startScreen').classList.add('hidden');
+      gameActive = true;
+      score = 0;
+      lives = 3;
+      lastQuizScore = 0;
+      items = [];
+      groundItems = [];
+      updateScore();
+      updateLives();
+      gameLoop();
+      spawnItems();
+    }
+
+    function restartGame() {
+      document.getElementById('winScreen').classList.remove('active');
+      startGame();
+    }
+
+    function spawnItems() {
+      if (!gameActive) return;
+      
+      items.push(new FallingItem());
+      
+      setTimeout(spawnItems, Math.random() * 1000 + 800);
+    }
+
+    function gameLoop() {
+      if (!gameActive) return;
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Update and draw items
+      items = items.filter(item => {
+        const shouldKeep = item.update();
+        if (shouldKeep || item.collected) {
+          item.draw();
+        }
+        return shouldKeep;
+      });
+      
+      // Draw ground pile
+      groundItems.forEach((item, index) => {
+        ctx.save();
+        ctx.globalAlpha = 0.7;
+        ctx.font = '25px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(item.emoji, item.x, canvas.height - 40 - (index * 8));
+        ctx.restore();
+      });
+      
+      requestAnimationFrame(gameLoop);
+    }
+
+    function showQuiz() {
+      gameActive = false;
+      lastQuizScore = score;
+      
+      const quizModal = document.getElementById('quizModal');
+      const questionEl = document.getElementById('quizQuestion');
+      const optionsEl = document.getElementById('quizOptions');
+      const feedbackEl = document.getElementById('quizFeedback');
+      const continueBtn = document.getElementById('quizContinue');
+      
+      // Select random question
+      currentQuiz = quizQuestions[Math.floor(Math.random() * quizQuestions.length)];
+      
+      questionEl.textContent = currentQuiz.question;
+      optionsEl.innerHTML = '';
+      feedbackEl.className = 'quiz-feedback';
+      feedbackEl.style.display = 'none';
+      continueBtn.style.display = 'none';
+      
+      currentQuiz.options.forEach((option, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'quiz-option';
+        btn.textContent = option;
+        btn.onclick = () => answerQuiz(index, btn);
+        optionsEl.appendChild(btn);
+      });
+      
+      quizModal.classList.add('active');
+    }
+
+    function answerQuiz(answerIndex, btnEl) {
+      const feedbackEl = document.getElementById('quizFeedback');
+      const continueBtn = document.getElementById('quizContinue');
+      const allButtons = document.querySelectorAll('.quiz-option');
+      
+      allButtons.forEach(btn => btn.disabled = true);
+      
+      if (answerIndex === currentQuiz.correct) {
+        btnEl.classList.add('correct');
+        feedbackEl.className = 'quiz-feedback correct show';
+        feedbackEl.textContent = `✅ Correct! ${currentQuiz.explanation}`;
+        playCorrectSound();
+      } else {
+        btnEl.classList.add('incorrect');
+        allButtons[currentQuiz.correct].classList.add('correct');
+        feedbackEl.className = 'quiz-feedback incorrect show';
+        feedbackEl.textContent = `❌ Not quite. ${currentQuiz.explanation}`;
+        playIncorrectSound();
+      }
+      
+      continueBtn.style.display = 'block';
+    }
+
+    function closeQuiz() {
+      document.getElementById('quizModal').classList.remove('active');
+      gameActive = true;
+      gameLoop();
+    }
+
+    function winGame() {
+      gameActive = false;
+      document.getElementById('winScreen').classList.add('active');
+      playWinSound();
+    }
+
+    function gameOver() {
+      gameActive = false;
+      alert(`Game Over! Your final score: ${score}\n\nTry again to reach 50 points!`);
+      restartGame();
+    }
+
+    function updateScore() {
+      document.getElementById('scoreDisplay').textContent = score;
+    }
+
+    function updateLives() {
+      const hearts = '❤️'.repeat(lives);
+      document.getElementById('livesDisplay').textContent = hearts || '💔';
+    }
+
+    // Mouse tracking
+    document.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      beeCursor.style.left = mouseX + 'px';
+      beeCursor.style.top = mouseY + 'px';
+    });
+
+    // Sound effects
+    function playCollectSound() {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+      gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+      
+      oscillator.start(audioCtx.currentTime);
+      oscillator.stop(audioCtx.currentTime + 0.1);
+    }
+
+    function playBadSound() {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      oscillator.frequency.setValueAtTime(200, audioCtx.currentTime);
+      gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+      
+      oscillator.start(audioCtx.currentTime);
+      oscillator.stop(audioCtx.currentTime + 0.2);
+    }
+
+    function playCorrectSound() {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      oscillator.frequency.setValueAtTime(523, audioCtx.currentTime);
+      oscillator.frequency.setValueAtTime(659, audioCtx.currentTime + 0.1);
+      oscillator.frequency.setValueAtTime(784, audioCtx.currentTime + 0.2);
+      
+      gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+      
+      oscillator.start(audioCtx.currentTime);
+      oscillator.stop(audioCtx.currentTime + 0.3);
+    }
+
+    function playIncorrectSound() {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
+      oscillator.frequency.setValueAtTime(250, audioCtx.currentTime + 0.1);
+      
+      gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+      
+      oscillator.start(audioCtx.currentTime);
+      oscillator.stop(audioCtx.currentTime + 0.2);
+    }
+
+    function playWinSound() {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const notes = [523, 659, 784, 1047];
+      
+      notes.forEach((freq, i) => {
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime + i * 0.15);
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime + i * 0.15);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i * 0.15 + 0.3);
+        
+        oscillator.start(audioCtx.currentTime + i * 0.15);
+        oscillator.stop(audioCtx.currentTime + i * 0.15 + 0.3);
+      });
+    }
+
+    // Resize handler
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+  </script>
+</body>
+</html>
