@@ -30,7 +30,6 @@ Earn 1 point per good item collected
 3 lives (lose one for each bad item)
 Goal: Reach 50 points to win
 
-
 Visual Effects
 
 Garden background from Unsplash
@@ -38,14 +37,7 @@ Items pile up at the bottom
 Smooth animations
 Sound feedback for all actions
 
-
 Fully Responsive - Works on desktop and mobile
-
-📦 For GitHub/Vercel Deployment:
-Create a simple file structure:
-bee-garden-game/
-├── index.html (the artifact above)
-└── README.md
 
 The game uses:
 
